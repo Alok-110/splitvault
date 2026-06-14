@@ -7,4 +7,101 @@ datasource db {
   provider = "postgresql"
 }
 
-// Add your models below
+model User {
+  id                  String            @id @default(uuid())
+  name                String
+  email               String            @unique
+  password            String
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  groups              Group[]
+  groupMemberships    GroupMembership[]
+  expenses            Expense[]
+  expenseSplits       ExpenseSplit[]
+  settlementsPaid     Settlement[]      @relation("SettlementPayer")
+  settlementsReceived Settlement[]      @relation("SettlementReceiver")
+}
+
+model Group {
+  id               String            @id @default(uuid())
+  name             String
+  createdBy        String
+  creator          User              @relation(fields: [createdBy], references: [id])
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  groupMemberships GroupMembership[]
+  expenses         Expense[]
+  settlement       Settlement[]
+}
+
+model GroupMembership {
+  id        String    @id @default(uuid())
+  user      User      @relation(references: [id], fields: [userId])
+  group     Group     @relation(references: [id], fields: [groupId])
+  joinDate  DateTime  @default(now())
+  leaveDate DateTime?
+  userId    String
+  groupId   String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+enum SplitType {
+  EQUAL
+  PERCENTAGE
+  EXACT
+}
+
+enum Currency {
+  INR
+  USD
+}
+
+model Expense {
+  id            String         @id @default(uuid())
+  group         Group          @relation(references: [id], fields: [groupId])
+  user          User           @relation(references: [id], fields: [paidBy])
+  amount        Float
+  groupId       String
+  paidBy        String
+  currency      Currency
+  description   String
+  date          DateTime
+  splitType     SplitType
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  expenseSplits ExpenseSplit[]
+}
+
+enum Status {
+  PENDING
+  PAID
+}
+
+model ExpenseSplit {
+  id        String   @id @default(uuid())
+  expense   Expense  @relation(references: [id], fields: [expenseId])
+  user      User     @relation(references: [id], fields: [userId])
+  expenseId String
+  userId    String
+  amount    Float
+  status    Status   @default(PENDING)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Settlement {
+  id        String   @id @default(uuid())
+  group     Group    @relation(fields: [groupId], references: [id])
+  payer     User     @relation("SettlementPayer", fields: [paidBy], references: [id])
+  receiver  User     @relation("SettlementReceiver", fields: [paidTo], references: [id])
+  groupId   String
+  paidBy    String
+  paidTo    String
+  amount    Float
+  currency  Currency
+  date      DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
