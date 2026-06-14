@@ -22,4 +22,22 @@ const register = async (name: string, email: string, password: string) => {
   return {token, user};
 };
 
-export { register }
+const login = async (email: string, password: string) => {
+
+    const user = await prisma.user.findUnique({where: { email }});
+    if(!user)
+      throw new Error("User does not exist. Please register first");
+
+    const passwordMatch = await bcrypt.compare(password, user.password)
+    if (!passwordMatch) throw new Error("Invalid password")
+
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      process.env.JWT_SECRET!,
+      { expiresIn: "7d" },
+    );
+
+    return { token, user };
+}
+
+export { register, login }
